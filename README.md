@@ -1,5 +1,3 @@
-# midaspy
- Mixed frequency data sampling regression modelling
 # Mixed Data Sampling (MIDAS) Modeling in Python
 
 ## Current Features
