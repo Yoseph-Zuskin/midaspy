@@ -566,6 +566,39 @@ class MIDASResultsWrapper(object):
         prediction = np.dot(values.values, self.params.values).reshape((len(new_target_dates),))
         return pd.Series(prediction).rename(self.endog_name + ' Predictions').to_frame()
                 
+    def conf_int(cls, alpha=.05, sig_dig=3):
+        """
+        Return confidence interval of beta coefficients given alpha. Uses students' t-test.
+        Based on the code for the statsmodels..regression.linear_model.OLS.conf_int method.
+        
+        Parameters
+        ----------
+        alpha : float, optional
+            The significance level for the confidence interval. The default `alpha` = .05
+            returns a 95% confidence interval.
+        sig_dig : int, optional
+            Number of significant digitals to show in the output table. The default is 3.
+            
+        Returns
+        -------
+        conf_int : pandas.DataFrame
+            Each row contains [lower, upper] limits of the confidence interval for the
+            corresponding parameter. The first column contains all lower, the second column
+            contains all upper limits.
+        """
+        mse = (sum((cls.orig_endog.values - cls.predict().values) ** 2)) / (cls.X.shape[0] - cls.X.shape[1])
+        var_b = mse * (np.linalg.inv(np.dot(cls.X.T.values, cls.X.values)).diagonal())
+        sd_b = np.sqrt(var_b)
+        df_resid = cls.orig_endog.shape[0] - 1
+        q = t.ppf(1 - alpha / 2, df_resid)
+        params = cls.params.iloc[:, 0].values
+        lower = params - q * sd_b
+        upper = params + q * sd_b
+        conf_int = pd.DataFrame(np.column_stack([lower, upper]),
+                                columns=[alpha / 2, 1 - alpha / 2]).set_index(
+            cls.params.index.values).round(sig_dig)
+        return conf_int
+    
     def score(cls):
         """
         Return coefficient of determination R^2 of the prediction.
@@ -578,7 +611,7 @@ class MIDASResultsWrapper(object):
         and model parameters (both regressor coefficients and weighting parameters).
         """
         n = cls.orig_endog.shape[0]
-        p = len(cls.result.x)
+        p = len(cls.results.x) - 1 # excludes constant coefficient
         return 1 - (1 - cls.score()) * (n - 1) / (n - p - 1)
     
     def rse(cls):
@@ -587,7 +620,7 @@ class MIDASResultsWrapper(object):
         """
         rss = sum((cls.orig_endog.values - cls.predict().values) ** 2)[0]
         n = cls.orig_endog.shape[0]
-        p = len(cls.result.x)
+        p = len(cls.results.x) - 1 # excludes constant coefficient
         return np.sqrt(rss / (n - p - 1))
     
     def f_stat(cls):
@@ -597,22 +630,40 @@ class MIDASResultsWrapper(object):
         tss = sum((cls.orig_endog.values - cls.orig_endog.mean()[0]) ** 2)[0]
         rss = sum((cls.orig_endog.values - cls.predict().values) ** 2)[0]
         n = cls.orig_endog.shape[0]
-        p = len(cls.result.x)
+        p = len(cls.results.x) - 1 # excludes constant coefficient
         return ((tss - rss) / p) / (rss / (n - p - 1))
     
-    def significance(cls):
+    def significance(cls, alpha=.05, sig_dig=3):
         """
-        Return summary of variable significance. Similar to part of
-        statsmodels.api.OLS().fit().summary() which shows standard
-        error, t-test, and p-values of each variable.
+        Return summary of variable significance. Similar to middle part of
+        statsmodels.api.OLS.fit.summary method.
         
         Source: https://stackoverflow.com/questions/27928275/
+        
+        Parameters
+        ----------
+        alpha : float, optional
+            The significance level for the confidence interval. The default `alpha` = .05
+            returns a 95% confidence interval.
+        sig_dig : int, optional
+            Number of significant digitals to show in the output table. The default is 3.
+            
+        Returns
+        -------
+        significance : pandas.DataFrame
+             Table showing standard  error, t-test, p-values, and confidence interval for
+             the beta coefficient of each variable (using student's t-test; 95% default).
         """
         mse = (sum((cls.orig_endog.values - cls.predict().values) ** 2)) / (cls.X.shape[0] - cls.X.shape[1])
         var_b = mse * (np.linalg.inv(np.dot(cls.X.T.values, cls.X.values)).diagonal())
         sd_b = np.sqrt(var_b)
         ts_b = cls.params.iloc[:, 0].values / sd_b
         p_values = [2 * (1 - t.cdf(np.abs(i),(len(cls.X.values) - 1))) for i in ts_b]
-        significance = pd.DataFrame([cls.params.Coefficients.values, sd_b, ts_b, p_values]).T.set_index(cls.params.index.rename(''))
-        significance.columns = ['coef', 'std err', 't', 'P>|t|']
+        q = t.ppf(1 - alpha / 2, df_resid)
+        params = cls.params.iloc[:, 0].values
+        lower = params - q * sd_b
+        upper = params + q * sd_b
+        significance = pd.DataFrame([cls.params.Coefficients.values,sd_b, ts_b, p_values,
+                                    lower, upper]).T.set_index(cls.params.index.values).round(sig_dig)
+        significance.columns = ['coef', 'std err', 't', 'P>|t|', str(alpha / 2), str(1 - alpha / 2)]
         return significance
