@@ -659,6 +659,7 @@ class MIDASResultsWrapper(object):
         sd_b = np.sqrt(var_b)
         ts_b = cls.params.iloc[:, 0].values / sd_b
         p_values = [2 * (1 - t.cdf(np.abs(i),(len(cls.X.values) - 1))) for i in ts_b]
+        df_resid = cls.orig_endog.shape[0] - 1
         q = t.ppf(1 - alpha / 2, df_resid)
         params = cls.params.iloc[:, 0].values
         lower = params - q * sd_b
