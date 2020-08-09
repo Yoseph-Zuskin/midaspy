@@ -1,4 +1,5 @@
 # Mixed Data Sampling (MIDAS) Modeling in Python
+Libirary usage tutorial: <a href="https://colab.research.google.com/github/Yoseph-Zuskin/midaspy/blob/master/example/monthly_CPI_daily_stock_index.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
 
 ## Current Features
 - Beta, Exponential Almon, and Hyperbolic scheme polynomial weighting methods.
