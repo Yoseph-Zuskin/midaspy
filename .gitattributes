@@ -1,2 +1,9 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+.ipynb_checkpoints/
+.pytest_cache/
+__pycache__/
+.venv
+.idea/
+.vscode/
