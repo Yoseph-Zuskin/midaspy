@@ -134,7 +134,7 @@ class HyperbolicWeights(WeightMethod):
 
     def weights(self, nlags):
         """
-        Exponential Almon polynomial weighting method.
+        Hyperbolic (gamma) polynomial weighting method.
 
         Parameters
         ----------
