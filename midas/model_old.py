@@ -1,5 +1,5 @@
 import numpy as np, pandas as pd
-from midaspy.iolib import *
+from midas.iolib import *
 from dateutil.relativedelta import relativedelta
 from scipy.optimize import least_squares
 from scipy.stats import t
